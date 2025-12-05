@@ -34,3 +34,16 @@ for i in range(num_vectors):
 print(f"NumPy way ({num_vectors} items): {time.time() - start:.4f}s")
 
 print(f"Final DB Size: {db.get_size()}")
+
+print(f"\n--- Testing Search ---")
+# Create a dummy query (random vector)
+query = np.random.random((dim)).astype(np.float32)
+
+# Search for top 5 nearest neighbors
+print("Searching for top 5 neighbors...")
+start = time.time()
+results = db.search(query, 5)  # <--- This will use stl.h implicit conversion
+end = time.time()
+
+print(f"Search time: {end - start:.4f}s")
+print(f"Indices found: {results}")

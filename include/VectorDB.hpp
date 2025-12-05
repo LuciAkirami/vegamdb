@@ -37,4 +37,10 @@ public:
 
 	// 4. Function to add a vector our database
 	void add_vector_from_pointer(const float *arr, size_t size);
+
+	// 5. Search Function
+	// input_query: The vector to search for
+	// k: How many neighbors to return (e.g., top 5)
+	// Returns: A list of indices (integers) of the nearest vectors
+	std::vector<int> search(const std::vector<float> &input_query, int k);
 };
