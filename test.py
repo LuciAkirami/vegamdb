@@ -2,28 +2,35 @@ import numpy as np
 import myvector_db
 import time
 
-# 1. Initialize the Database
 db = myvector_db.SimpleVectorDB()
-print("Database initialized successfully!")
 
-# 2. Generate some dummy data using NumPy
-# We create 1000 vectors, each with dimension 128 (typical for small models)
-num_vectors = 1000
+# Increase size to make the difference obvious
+num_vectors = 50000
 dim = 128
 
-print(f"Generating {num_vectors} vectors of dimension {dim}...")
-# Create random float data
+print(f"Generating {num_vectors} vectors...")
 data = np.random.random((num_vectors, dim)).astype(np.float32)
 
-# 3. Add vectors to the C++ DB
-start_time = time.time()
+# --- Test 1: The Old Way (Slow) ---
+print("Starting Standard List insertion...")
+start = time.time()
+for i in range(10000):  # Only do 10000 to show it works, otherwise it takes too long!
+    db.add_vector(data[i])
+print(f"Standard way (10000 items): {time.time() - start:.4f}s")
+
+db = myvector_db.SimpleVectorDB()
+
+# Increase size to make the difference obvious
+num_vectors = 50000
+dim = 128
+
+# --- Test 2: The New Way (Fast) ---
+print("Starting NumPy Direct insertion...")
+start = time.time()
 for i in range(num_vectors):
-    # We must convert the numpy row to a standard list for now
-    # (We will optimize this later!)
-    db.add_vector(data[i].tolist())
+    # Pass the numpy row DIRECTLY. No .tolist()!
+    db.add_vector_numpy(data[i])
 
-end_time = time.time()
+print(f"NumPy way ({num_vectors} items): {time.time() - start:.4f}s")
 
-# 4. Verify
-print(f"Successfully stored {db.get_size()} vectors.")
-print(f"Time taken: {end_time - start_time:.4f} seconds")
+print(f"Final DB Size: {db.get_size()}")

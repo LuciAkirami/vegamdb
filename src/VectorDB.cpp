@@ -25,3 +25,15 @@ int SimpleVectorDB::get_size()
 	// Return the number of vectors currently stored
 	return database.size();
 }
+
+// 4. Implementing add_vector_from_pointer
+void SimpleVectorDB::add_vector_from_pointer(const float *arr, size_t size)
+{
+	// 1. Create a "temporary" std::vector
+	// We can initialize a vector directly from a pointer range!
+	// This tells C++: "Start at address 'arr', and keep reading until you hit 'arr + size'"
+	std::vector<float> vec(arr, arr + size);
+
+	// 2. Add it to our database
+	database.push_back(vec);
+}

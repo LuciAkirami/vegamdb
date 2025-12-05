@@ -6,6 +6,7 @@
 // which would confuse the compiler.
 
 #include <vector>
+#include <cstddef> // <--- Add this line! This defines "size_t"
 
 // We define a Class. This is our "Blueprint".
 class SimpleVectorDB
@@ -33,4 +34,7 @@ public:
 
 	// 3. Function to get the current size of the database
 	int get_size();
+
+	// 4. Function to add a vector our database
+	void add_vector_from_pointer(const float *arr, size_t size);
 };
