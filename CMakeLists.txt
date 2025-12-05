@@ -35,7 +35,13 @@ include_directories(include)
 #     src/VectorDB.cpp
 # )
 
-
+# 1. Turn on Maximum Optimization (-O3)
+# 2. Tune for the architecture of YOUR specific computer (-march=native)
+if(MSVC)
+    add_compile_options(/O2 /arch:AVX2)
+else()
+    add_compile_options(-O3 -march=native -ffast-math)
+endif()
 
 pybind11_add_module(myvector_db
     src/VectorDB.cpp

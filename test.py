@@ -47,3 +47,39 @@ end = time.time()
 
 print(f"Search time: {end - start:.4f}s")
 print(f"Indices found: {results}")
+
+print(f"\n--- Testing Search (Verification with Numpy) ---")
+# Create a random query
+query = np.random.random((dim)).astype(np.float32)
+
+# 1. Run C++ Search
+print("Searching with C++...")
+start = time.time()
+results = db.search(query, 5)
+end = time.time()
+print(f"C++ Time: {end - start:.4f}s")
+print(f"C++ Indices: {results}")
+
+# 2. Verify with NumPy (Ground Truth)
+# We manually calculate distance for comparison
+print("\nVerifying with NumPy...")
+# Calculate Euclidean distance for ALL vectors in 'data' against 'query'
+# axis=1 means sum across the columns (dimensions)
+start = time.time()
+diff = data - query
+dists = np.linalg.norm(diff, axis=1)
+
+# Get the indices of the smallest 5 distances
+# argsort returns the indices that would sort the array
+numpy_indices = np.argsort(dists)[:5]
+end = time.time()
+
+print(f"Numpy Time: {end - start:.4f}s")
+print(f"NumPy Indices: {numpy_indices.tolist()}")
+
+# 3. Compare
+# We use set() because the order of TIES might differ, but the set should be identical.
+if set(results) == set(numpy_indices):
+    print("\nSUCCESS: C++ results match NumPy Ground Truth!")
+else:
+    print("\nERROR: Results do not match!")
