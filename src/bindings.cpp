@@ -72,5 +72,7 @@ PYBIND11_MODULE(myvector_db, m)
                  // Call the raw C++ method using the extracted pointer and size.
                  self.add_vector_from_pointer(data_ptr, size);
              })
-        .def("search", &SimpleVectorDB::search);
+        .def("search", &SimpleVectorDB::search)
+        .def("save", &SimpleVectorDB::save)
+        .def("load", &SimpleVectorDB::load);
 }

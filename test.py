@@ -15,7 +15,7 @@ data = np.random.random((num_vectors, dim)).astype(np.float32)
 print("Starting Standard List insertion...")
 start = time.time()
 for i in range(10000):  # Only do 10000 to show it works, otherwise it takes too long!
-    db.add_vector(data[i])
+    db.add_vector(data[i].tolist())
 print(f"Standard way (10000 items): {time.time() - start:.4f}s")
 
 db = myvector_db.SimpleVectorDB()
@@ -83,3 +83,31 @@ if set(results) == set(numpy_indices):
     print("\nSUCCESS: C++ results match NumPy Ground Truth!")
 else:
     print("\nERROR: Results do not match!")
+
+print(f"\n--- Testing Persistence (Save/Load) ---")
+filename = "my_index.bin"
+
+# 1. Save
+print(f"Saving {db.get_size()} vectors to {filename}...")
+start = time.time()
+db.save(filename)
+print(f"Save time: {time.time() - start:.4f}s")
+
+# 2. Kill the DB (Simulate restarting the app)
+print("Deleting Database object...")
+del db
+db = myvector_db.SimpleVectorDB()
+print(f"New DB Size: {db.get_size()} (Should be 0)\n\n")
+
+# 3. Load
+print(f"Loading from {filename}...")
+start = time.time()
+db.load(filename)
+print(f"Load time: {time.time() - start:.4f}s")
+
+# 4. Verify
+print(f"Restored DB Size: {db.get_size()}")
+if db.get_size() == 50000:
+    print("SUCCESS: Persistence working!")
+else:
+    print("ERROR: Data lost!")

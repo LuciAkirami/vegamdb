@@ -3,6 +3,8 @@
 #include "VectorDB.hpp" // <--- We include the header we just made!
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <stdexcept>
 
 // 1. Implementing the Constructor
 // We use "SimpleVectorDB::" to tell the compiler:
@@ -83,4 +85,79 @@ std::vector<int> SimpleVectorDB::search(const std::vector<float> &input_query, i
 	}
 
 	return indices;
+}
+
+// 6. Save the database to a binary file
+void SimpleVectorDB::save(const std::string &filename)
+{
+	int rows = database.size();
+
+	// Guard Clause: If DB is empty, don't create a file. Just return.
+	if (rows == 0)
+	{
+		return;
+	}
+
+	int cols = database[0].size();
+
+	// Open file in Binary Mode.
+	// std::ios::out is implied by ofstream, but good for clarity.
+	std::ofstream outfile(filename, std::ios::binary | std::ios::out);
+
+	if (!outfile.is_open())
+	{
+		throw std::runtime_error("Error: Could not open file for writing: " + filename);
+	}
+
+	// 1. Write Metadata (Header)
+	// We cast the address of the integer (&rows) to a raw char pointer.
+	// This dumps the 4 bytes of the integer directly to disk.
+	outfile.write(reinterpret_cast<const char *>(&rows), sizeof(int));
+	outfile.write(reinterpret_cast<const char *>(&cols), sizeof(int));
+
+	// 2. Write Data (Body)
+	// Iterate by Reference (const auto&) to avoid copying the vector.
+	for (const auto &vec : database)
+	{
+		// vec.data() gives us the pointer to the raw array of floats.
+		// We dump the entire row in one go.
+		outfile.write(reinterpret_cast<const char *>(vec.data()), cols * sizeof(float));
+	}
+
+	outfile.close();
+}
+
+// 7. Load the database from a binary file (overwriting current data)
+void SimpleVectorDB::load(const std::string &filename)
+{
+	std::ifstream infile(filename, std::ios::binary | std::ios::in);
+
+	if (!infile.is_open())
+	{
+		throw std::runtime_error("Error: Could not open file for reading: " + filename);
+	}
+
+	int rows, cols;
+
+	// 1. Read Metadata
+	infile.read(reinterpret_cast<char *>(&rows), sizeof(int));
+	infile.read(reinterpret_cast<char *>(&cols), sizeof(int));
+
+	// 2. Prepare Memory
+	// Clear ensures we remove old data. Resize allocates the "row" slots.
+	database.clear();
+	database.resize(rows);
+
+	// 3. Read Data
+	for (int i = 0; i < rows; i++)
+	{
+		// Allocate memory for this specific row so .read has a place to write.
+		database[i].resize(cols);
+
+		// Read directly from disk into the vector's internal memory array.
+		// This avoids creating a temporary buffer.
+		infile.read(reinterpret_cast<char *>(database[i].data()), cols * sizeof(float));
+	}
+
+	infile.close();
 }

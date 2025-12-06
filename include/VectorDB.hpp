@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstddef> // <--- Add this line! This defines "size_t"
+#include <string>
 
 // We define a Class. This is our "Blueprint".
 class SimpleVectorDB
@@ -43,4 +44,10 @@ public:
 	// k: How many neighbors to return (e.g., top 5)
 	// Returns: A list of indices (integers) of the nearest vectors
 	std::vector<int> search(const std::vector<float> &input_query, int k);
+
+	// 6. Save the database to a binary file
+	void save(const std::string &filename);
+
+	// 7. Load the database from a binary file(overwriting current data)
+	void load(const std::string &filename);
 };
