@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstddef> // <--- Add this line! This defines "size_t"
 #include <string>
+#include "KMeans.hpp"
 
 // We define a Class. This is our "Blueprint".
 class SimpleVectorDB
@@ -21,6 +22,11 @@ private:
 	// This is a vector of vectors! A 2D matrix.
 	// Each row is one embedding (e.g., [0.1, 0.5, ...])
 	std::vector<std::vector<float>> database;
+
+	// ----- IVF Index Storage -----
+	bool is_indexed = false;
+	std::vector<std::vector<float>> centroids;
+	std::vector<std::vector<int>> inverted_index;
 
 public:
 	// "public" functions can be called by anyone using this class.
@@ -50,4 +56,16 @@ public:
 
 	// 7. Load the database from a binary file(overwriting current data)
 	void load(const std::string &filename);
+
+	// -------- IVF (Inverted File) Functions ---------
+
+	// 1. Train the index
+	void build_index(int num_clusters, int max_iters);
+
+	// 2. Fast Search (IVF)
+	// nprobe = How many nearby clusters to check (e.g. 1 or 3)
+	std::vector<int> search_ivf(const std::vector<float> &query, int k, int nprobe);
+
+	// ---------- Helper Functions -------------
+	float dist(const std::vector<float> &a, const std::vector<float> &b);
 };

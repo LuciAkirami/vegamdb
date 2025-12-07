@@ -2,6 +2,7 @@
 /.vscode/
 build/
 __pycache__/
+.cache/
 *.so
 
 # Ignore binary data files

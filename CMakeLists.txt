@@ -46,4 +46,5 @@ endif()
 pybind11_add_module(myvector_db
     src/VectorDB.cpp
     src/bindings.cpp
+    src/KMeans.cpp
 )
