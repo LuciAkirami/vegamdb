@@ -3,6 +3,7 @@
 #include <pybind11/numpy.h> // The header required to handle NumPy arrays
 #include "VectorDB.hpp"
 #include "KMeans.hpp"
+#include "Annoy.hpp"
 
 // Create a namespace alias "py" to save typing "pybind11::" everywhere
 namespace py = pybind11;
@@ -122,4 +123,9 @@ PYBIND11_MODULE(myvector_db, m)
         .def(py::init<int, int, int>())
         // The main method: Takes data, returns the KMeansIndex
         .def("train", &KMeans::train);
+    // 3. Bind AnnoyIndex
+    py::class_<AnnoyIndex>(m, "AnnoyIndex")
+        .def(py::init<int>()) // Constructor takes 'dimension'
+        .def("build", &AnnoyIndex::build)
+        .def("query", &AnnoyIndex::query);
 }
