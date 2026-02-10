@@ -1,25 +1,15 @@
 #include "KMeans.hpp"
+#include "Utils.hpp"
 #include <vector>
 #include <cmath>
 #include <algorithm>
 #include <numeric>
 
-KMeans::KMeans(int k, int max_iters, int dimension) : k(k), max_iters(max_iters), dimension(dimension) {}
+// =========================================================
+// SECTION: Constructor
+// =========================================================
 
-// =========================================================
-// Helper: Euclidean Distance
-// Calculates distance between two vectors: sqrt(sum((a-b)^2))
-// =========================================================
-float KMeans::dist(const std::vector<float> &a, const std::vector<float> &b)
-{
-    float distance = 0.0f;
-    for (int i = 0; i < dimension; i++)
-    {
-        float diff = a[i] - b[i];
-        distance += (diff * diff);
-    }
-    return std::sqrt(distance);
-}
+KMeans::KMeans(int k, int max_iters, int dimension) : k(k), max_iters(max_iters), dimension(dimension) {}
 
 /* ---- Single Train Function ---------
 // KMeansIndex KMeans::train(std::vector<std::vector<float>> &data)
@@ -93,6 +83,10 @@ float KMeans::dist(const std::vector<float> &a, const std::vector<float> &b)
 */
 
 // =========================================================
+// SECTION: Main Training Logic
+// =========================================================
+
+// =========================================================
 // Main Function: Train
 // Implements Lloyd's Algorithm:
 // 1. Initialize Centroids
@@ -137,13 +131,19 @@ KMeansIndex KMeans::train(const std::vector<std::vector<float>> &data)
 }
 
 // =========================================================
+// SECTION: Helper Implementations
+// =========================================================
+
+// =========================================================
 // Helper 1: Initialization
 // strategy: Random Partitioning (Shuffle indices and pick K Centroids)
 // =========================================================
 void KMeans::init_centroids(const std::vector<std::vector<float>> &data, KMeansIndex &index)
 {
-    std::random_device rd;  // Hardware source of entropy
-    std::mt19937 gen(rd()); // Mersenne Twister engine
+    // std::random_device rd;  // Hardware source of entropy
+    // std::mt19937 gen(rd()); // Mersenne Twister engine
+
+    std::mt19937 gen = get_random_engine();
 
     // Create a list of indices [0, 1, 2, ... N]
     std::vector<int> indices(data.size());
@@ -175,7 +175,7 @@ void KMeans::assign_points_to_buckets(const std::vector<std::vector<float>> &dat
         // Compare against all K centroids to find the closest one
         for (int j = 0; j < k; j++)
         {
-            float d = dist(data[i], index.centroids[j]);
+            float d = euclidean_distance_squared(data[i], index.centroids[j]);
             if (d < min_dist)
             {
                 min_dist = d;

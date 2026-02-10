@@ -48,4 +48,5 @@ pybind11_add_module(myvector_db
     src/bindings.cpp
     src/KMeans.cpp
     src/Annoy.cpp
+    src/Utils.cpp
 )

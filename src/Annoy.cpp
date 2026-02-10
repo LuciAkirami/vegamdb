@@ -134,6 +134,12 @@ AnnoyNode *AnnoyIndex::build_tree_recursive(std::vector<int> &indices, int k_lea
     return node;
 }
 
+/**
+ * @brief Calculates Euclidean distance between two vectors.
+ * * @param a First vector.
+ * @param b Second vector.
+ * @return float The distance.
+ */
 float AnnoyIndex::dist(const std::vector<float> &a, const std::vector<float> &b)
 {
     float distance = 0.0f;

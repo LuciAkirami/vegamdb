@@ -5,24 +5,13 @@
 #include <cmath>
 #include <fstream>
 #include <stdexcept>
+#include "Utils.hpp"
 
 // =========================================================
-// Helper: Euclidean Distance
-// Formula: d = sqrt( sum( (a[i] - b[i])^2 ) )
-// Used heavily in both Brute Force search and KMeans.
+// SECTION: Constructors & Basic Operations
 // =========================================================
-float SimpleVectorDB::dist(const std::vector<float> &a, const std::vector<float> &b)
-{
-	float distance = 0.0f;
-	for (int i = 0; i < a.size(); i++)
-	{
-		float diff = a[i] - b[i];
-		distance += (diff * diff);
-	}
-	return std::sqrt(distance);
-}
 
-// 1. Implementing the Constructor
+// Implementing the Constructor
 // We use "SimpleVectorDB::" to tell the compiler:
 // "This function belongs to the SimpleVectorDB class."
 SimpleVectorDB::SimpleVectorDB()
@@ -31,7 +20,7 @@ SimpleVectorDB::SimpleVectorDB()
 	// The vector "database" is automatically created empty.
 }
 
-// 2. Implementing add_vector
+// Implementing add_vector
 void SimpleVectorDB::add_vector(const std::vector<float> &vec)
 {
 	// "push_back" is the standard way to add to a vector (like .append in Python)
@@ -39,56 +28,55 @@ void SimpleVectorDB::add_vector(const std::vector<float> &vec)
 	database.push_back(vec);
 }
 
-// 3. Implementing get_size
+// Implementing get_size
 int SimpleVectorDB::get_size()
 {
 	// Return the number of vectors currently stored
 	return database.size();
 }
 
-// 4. Implementing add_vector_from_pointer
+// Implementing add_vector_from_pointer
 void SimpleVectorDB::add_vector_from_pointer(const float *arr, size_t size)
 {
-	// 1. Create a "temporary" std::vector
+	// Create a "temporary" std::vector
 	// We can initialize a vector directly from a pointer range!
 	// This tells C++: "Start at address 'arr', and keep reading until you hit 'arr + size'"
 	std::vector<float> vec(arr, arr + size);
 
-	// 2. Add it to our database
+	// Add it to our database
 	database.push_back(vec);
 }
 
-// 5. Implementing K Nearest Neighbors Search
+// =========================================================
+// SECTION: Search Logic (Brute Force)
+// =========================================================
+
+// Implementing K Nearest Neighbors Search
 std::vector<int> SimpleVectorDB::search(const std::vector<float> &input_query, int k)
 {
-	// 1. Store pairs of (Index, Distance)
+	// Store pairs of (Index, Distance)
 	std::vector<std::pair<int, float>> scores;
 	scores.reserve(database.size()); // Optimization: Reserve memory upfront to avoid resizing
 
-	// 2. Calculate Distances
+	// Calculate Distances
 	for (int i = 0; i < database.size(); i++)
 	{
 		// CRITICAL: Use reference (&) to avoid copying the vector!
 		const auto &target = database[i];
 
-		float dist_sq = 0.0f;
-
-		// 3. Euclidean Distance Calculation
-		for (int j = 0; j < target.size(); j++)
-		{
-			float diff = target[j] - input_query[j];
-			dist_sq += diff * diff;
-		}
+		// Euclidean Distance Calculation
+		// REFACTOR: Use shared Utils function
+		float d = euclidean_distance(target, input_query);
 
 		// We push (Index, Distance)
-		scores.push_back({i, std::sqrt(dist_sq)});
+		scores.push_back({i, d});
 	}
 
-	// 4. Sort based on Distance (Smallest distance first)
+	// Sort based on Distance (Smallest distance first)
 	std::sort(scores.begin(), scores.end(), [](const std::pair<int, float> &a, const std::pair<int, float> &b)
 			  { return a.second < b.second; });
 
-	// 5. Extract Top K Indices
+	// Extract Top K Indices
 	std::vector<int> indices;
 
 	// Safety check: Don't try to return more items than exist in the DB!
@@ -102,6 +90,10 @@ std::vector<int> SimpleVectorDB::search(const std::vector<float> &input_query, i
 
 	return indices;
 }
+
+// =========================================================
+// SECTION: Persistence (Save / Load)
+// =========================================================
 
 // =========================================================
 // Persistence: Save
@@ -194,6 +186,7 @@ void SimpleVectorDB::save(const std::string &filename)
 
 // =========================================================
 // Persistence: Load
+// Load the database from a binary file (overwriting current data)
 // Deserializes the binary file and reconstructs the Index in memory.
 // =========================================================
 void SimpleVectorDB::load(const std::string &filename)
@@ -281,6 +274,10 @@ void SimpleVectorDB::load(const std::string &filename)
 }
 
 // =========================================================
+// SECTION: IVF (Inverted File) Indexing
+// =========================================================
+
+// =========================================================
 // Index Building (Training Phase)
 // This function transforms the Flat Database into an IVF (Inverted File) Index.
 //
@@ -288,23 +285,23 @@ void SimpleVectorDB::load(const std::string &filename)
 // 1. Centroids: The "center points" of the clusters.
 // 2. Inverted Index: A list of buckets. Bucket[0] holds all Vector IDs belonging to Centroid[0].
 // =========================================================
-void SimpleVectorDB::build_index(int num_clusters, int max_iters)
+void SimpleVectorDB::build_ivf_index(int num_clusters, int max_iters)
 {
-	// 1. Guard Clause: Cannot train on empty data
+	// Guard Clause: Cannot train on empty data
 	if (database.empty())
 		return;
 
 	int dim = database[0].size();
 
-	// 2. Instantiate the Trainer
+	// Instantiate the Trainer
 	// We delegate the hard math to the KMeans class
 	KMeans trainer(num_clusters, max_iters, dim);
 
-	// 3. Run Training (This takes time!)
+	// Run Training (This takes time!)
 	// Returns a struct containing {centroids, buckets}
 	KMeansIndex results = trainer.train(database);
 
-	// 4. Store Results
+	// Store Results
 	// We save these into the SimpleVectorDB class so we can use them for search later.
 	this->centroids = results.centroids;
 	this->inverted_index = results.buckets;
@@ -323,7 +320,7 @@ void SimpleVectorDB::build_index(int num_clusters, int max_iters)
 // =========================================================
 std::vector<int> SimpleVectorDB::search_ivf(const std::vector<float> &query, int k, int nprobe)
 {
-	// 1. Safety Checks
+	// Safety Checks
 	if (!is_indexed)
 	{
 		return {}; // Index not built yet!
@@ -342,13 +339,14 @@ std::vector<int> SimpleVectorDB::search_ivf(const std::vector<float> &query, int
 
 	for (int i = 0; i < centroids.size(); i++)
 	{
-		float d = dist(centroids[i], query);
+		// REFACTOR: Use euclidean_distance_squared for speed
+		float d = euclidean_distance_squared(centroids[i], query);
 		centroid_dist_pairs.push_back({i, d});
 	}
 
 	// Sort to find the 'nprobe' closest centroids
 	std::sort(centroid_dist_pairs.begin(), centroid_dist_pairs.end(),
-			  [](std::pair<int, float> &a, std::pair<int, float> &b)
+			  [](const std::pair<int, float> &a, const std::pair<int, float> &b)
 			  { return a.second < b.second; }); // Return TRUE if a is smaller than b
 
 	// ---------------------------------------------------------
@@ -366,7 +364,7 @@ std::vector<int> SimpleVectorDB::search_ivf(const std::vector<float> &query, int
 		for (int vector_id : inverted_index[cluster_id])
 		{
 			// Calculate exact distance to the actual vector
-			float d = dist(database[vector_id], query);
+			float d = euclidean_distance_squared(database[vector_id], query);
 			candidates.push_back({vector_id, d});
 		}
 	}
@@ -376,7 +374,7 @@ std::vector<int> SimpleVectorDB::search_ivf(const std::vector<float> &query, int
 	// Now we sort the candidates to find the actual nearest neighbors.
 	// ---------------------------------------------------------
 	std::sort(candidates.begin(), candidates.end(),
-			  [](std::pair<int, float> &a, std::pair<int, float> &b)
+			  [](const std::pair<int, float> &a, const std::pair<int, float> &b)
 			  { return a.second < b.second; });
 
 	std::vector<int> final_indices;
@@ -390,4 +388,61 @@ std::vector<int> SimpleVectorDB::search_ivf(const std::vector<float> &query, int
 	}
 
 	return final_indices;
+}
+
+// =========================================================
+// SECTION: Annoy (Approx Nearest Neighbors Oh Yeah) Indexing
+// =========================================================
+
+// Build Annoy Index
+// This constructs a "Forest" of binary trees to partition the vector space.
+//
+// Concepts:
+// 1. Random Projections: Each tree node splits space using a random hyperplane.
+// 2. Forest: We build multiple trees (num_trees) to fix the "bad split" problem.
+//    If two neighbors are split apart in Tree 1, they might stay together in Tree 2.
+void SimpleVectorDB::build_annoy_index(int num_trees, int k_leaf)
+{
+	// Guard Clause: Cannot train on empty data
+	if (database.empty())
+		return;
+
+	// Cleanup: If an index already exists, delete it to prevent memory leaks
+	if (annoy_index != nullptr)
+	{
+		delete annoy_index;
+		annoy_index = nullptr;
+	}
+
+	// 1. Initialize Annoy
+	int dimension = database[0].size();
+	annoy_index = new AnnoyIndex(dimension);
+
+	// 2. Trigger Build
+	// This will create 'num_trees' different random trees
+	annoy_index->build(database, num_trees, k_leaf);
+}
+
+// Search Annoy Index
+std::vector<int> SimpleVectorDB::search_annoy(const std::vector<float> &query, int k, int search_k)
+{
+	// Safety Check: Index must exist
+	if (annoy_index == nullptr)
+	{
+		return {};
+	}
+
+	// Delegate to the Annoy engine
+	return annoy_index->query(query, k, search_k);
+}
+
+// Implementing the Destructor
+// We must manually clean up the AnnoyIndex because it is a raw pointer.
+SimpleVectorDB::~SimpleVectorDB()
+{
+	if (annoy_index != nullptr)
+	{
+		delete annoy_index;
+		annoy_index = nullptr;
+	}
 }

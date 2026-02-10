@@ -95,7 +95,7 @@ PYBIND11_MODULE(myvector_db, m)
         // Runs K-Means to build the Inverted File Index.
         // Python usage: db.build_index(num_clusters=100, max_iters=10)
         // -------------------------------------------------------------------------
-        .def("build_index", &SimpleVectorDB::build_index)
+        .def("build_index", &SimpleVectorDB::build_ivf_index)
 
         // -------------------------------------------------------------------------
         // 7. IVF Search
