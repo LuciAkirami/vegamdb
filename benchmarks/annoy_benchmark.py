@@ -1,5 +1,5 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import time
 
 
@@ -60,7 +60,7 @@ def benchmark():
     queries = generate_clustered_data(N_QUERIES, DIM, n_clusters_real=10)
 
     # Use VegamDB to hold data and calculate ground truth
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
     print("Ingesting data into VegamDB...")
     for i in range(N_VECTORS):
         db.add_vector_numpy(data[i])

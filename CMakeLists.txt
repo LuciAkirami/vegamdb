@@ -43,7 +43,7 @@ else()
     add_compile_options(-O3 -march=native -ffast-math)
 endif()
 
-pybind11_add_module(myvector_db
+pybind11_add_module(vegamdb
     src/VegamDB.cpp
     src/bindings.cpp
     src/indexes/FlatIndex.cpp

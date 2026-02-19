@@ -1,5 +1,5 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import matplotlib.pyplot as plt  # Optional: Only if you want to see the plot
 
 
@@ -26,7 +26,7 @@ data = generate_blobs(100, dim=2)  # 300 points total
 # 2. Train K-Means
 print("Training K-Means (K=3)...")
 # Args: K=3, MaxIters=10, Dim=2
-kmeans = myvector_db.KMeans(3, 10, 2)
+kmeans = vegamdb.KMeans(3, 10, 2)
 
 # Note: We must explicitly cast to list because we haven't optimized
 # the KMeans input for NumPy pointers yet! (Slow but fine for testing)

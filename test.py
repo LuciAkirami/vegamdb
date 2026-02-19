@@ -1,8 +1,8 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import time
 
-db = myvector_db.VegamDB()
+db = vegamdb.VegamDB()
 
 # Increase size to make the difference obvious
 num_vectors = 50000
@@ -18,7 +18,7 @@ for i in range(10000):  # Only do 10000 to show it works, otherwise it takes too
     db.add_vector(data[i].tolist())
 print(f"Standard way (10000 items): {time.time() - start:.4f}s")
 
-db = myvector_db.VegamDB()
+db = vegamdb.VegamDB()
 
 # --- Test 2: The New Way (Fast) ---
 print("Starting NumPy Direct insertion...")
@@ -92,7 +92,7 @@ print(f"Save time: {time.time() - start:.4f}s")
 # 2. Kill the DB (Simulate restarting the app)
 print("Deleting Database object...")
 del db
-db = myvector_db.VegamDB()
+db = vegamdb.VegamDB()
 print(f"New DB Size: {db.size()} (Should be 0)\n\n")
 
 # 3. Load

@@ -13,7 +13,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(myvector_db, m) {
+PYBIND11_MODULE(vegamdb, m) {
 
   m.doc() = "A high-performance Vector Database plugin written in C++";
 

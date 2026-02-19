@@ -1,5 +1,5 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import time
 import os
 
@@ -10,7 +10,7 @@ def run_benchmark(n_vectors, dim=128):
     print(f"========================================")
 
     # 1. Initialize
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
 
     # 2. Data Generation (Not measured in DB time)
     print("Generating data (NumPy)...")

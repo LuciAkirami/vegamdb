@@ -1,5 +1,5 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import os
 import time
 
@@ -17,7 +17,7 @@ def test_flat_persistence():
     query = data[42]  # Use a known vector as query
 
     # --- Save ---
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
     for i in range(N):
         db.add_vector_numpy(data[i])
 
@@ -30,7 +30,7 @@ def test_flat_persistence():
     del db
 
     # --- Load ---
-    db2 = myvector_db.VegamDB()
+    db2 = vegamdb.VegamDB()
     t0 = time.time()
     db2.load(filename)
     print(f"  Load time: {time.time() - t0:.4f}s")
@@ -62,14 +62,14 @@ def test_ivf_persistence():
     query = np.random.random(DIM).astype(np.float32)
 
     # --- Build & Save ---
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
     for i in range(N):
         db.add_vector_numpy(data[i])
 
     db.use_ivf_index(n_clusters=50, max_iters=10)
     db.build_index()
 
-    params = myvector_db.IVFSearchParams()
+    params = vegamdb.IVFSearchParams()
     params.n_probe = NPROBE
     results_before = db.search(query, K, params)
     print(f"  Results before save: {results_before.ids[:5]}")
@@ -81,7 +81,7 @@ def test_ivf_persistence():
     del db
 
     # --- Load ---
-    db2 = myvector_db.VegamDB()
+    db2 = vegamdb.VegamDB()
     t0 = time.time()
     db2.load(filename)
     print(f"  Load time: {time.time() - t0:.4f}s")
@@ -89,7 +89,7 @@ def test_ivf_persistence():
     assert db2.size() == N, f"FAIL: Size mismatch {db2.size()} != {N}"
     print(f"  Size after load: {db2.size()}")
 
-    params2 = myvector_db.IVFSearchParams()
+    params2 = vegamdb.IVFSearchParams()
     params2.n_probe = NPROBE
     results_after = db2.search(query, K, params2)
     print(f"  Results after load:  {results_after.ids[:5]}")
@@ -120,7 +120,7 @@ def test_annoy_persistence():
     query = np.random.random(DIM).astype(np.float32)
 
     # --- Build & Save ---
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
     for i in range(N):
         db.add_vector_numpy(data[i])
 
@@ -136,7 +136,7 @@ def test_annoy_persistence():
     del db
 
     # --- Load ---
-    db2 = myvector_db.VegamDB()
+    db2 = vegamdb.VegamDB()
     t0 = time.time()
     db2.load(filename)
     print(f"  Load time: {time.time() - t0:.4f}s")

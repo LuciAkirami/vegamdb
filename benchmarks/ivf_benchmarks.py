@@ -1,5 +1,5 @@
 import numpy as np
-import myvector_db
+import vegamdb
 import time
 
 
@@ -96,7 +96,7 @@ def benchmark():
     # Queries should also come from the same distribution to mimic real users
     queries = generate_clustered_data(100, DIM, n_clusters_real=10)
 
-    db = myvector_db.VegamDB()
+    db = vegamdb.VegamDB()
     # db.set_dimension(128)
     print("Ingesting data into C++ DB...")
     for i in range(N_VECTORS):
@@ -144,7 +144,7 @@ def benchmark():
 
         # Run all queries with this nprobe setting
         for i in range(N_QUERIES):
-            params = myvector_db.IVFSearchParams()
+            params = vegamdb.IVFSearchParams()
             params.n_probe = nprobe
             res = db.search(queries[i], K, params)
             ivf_results.append(res.ids)
