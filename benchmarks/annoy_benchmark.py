@@ -59,11 +59,11 @@ def benchmark():
     data = generate_clustered_data(N_VECTORS, DIM, n_clusters_real=500)
     queries = generate_clustered_data(N_QUERIES, DIM, n_clusters_real=10)
 
-    # Note: We need a SimpleVectorDB just to hold the data pointers/calculate GT
-    db_ref = myvector_db.SimpleVectorDB()
-    print("Ingesting data into Reference DB (for Ground Truth)...")
+    # Use VegamDB to hold data and calculate ground truth
+    db = myvector_db.VegamDB()
+    print("Ingesting data into VegamDB...")
     for i in range(N_VECTORS):
-        db_ref.add_vector_numpy(data[i])
+        db.add_vector_numpy(data[i])
 
     # ---------------------------------------------------------
     # 2. ESTABLISH GROUND TRUTH (Brute Force)
@@ -72,8 +72,8 @@ def benchmark():
     start_flat = time.time()
     ground_truth_results = []
     for i in range(N_QUERIES):
-        res = db_ref.search(queries[i], K)
-        ground_truth_results.append(res)
+        res = db.search(queries[i], K)
+        ground_truth_results.append(res.ids)
 
     time_flat = time.time() - start_flat
     avg_flat_ms = (time_flat / N_QUERIES) * 1000
@@ -89,27 +89,20 @@ def benchmark():
     print("-" * len(header))
 
     # To test different tree counts, we must rebuild the index each time.
-    # (In production, you'd build 20 trees once and search subsets, but rebuilding is cleaner for benchmarks)
     for n_trees in TREE_COUNTS:
 
-        # A. Build Index
-        annoy = myvector_db.AnnoyIndex(DIM)
-
-        # IMPORTANT: Annoy needs the raw data matrix.
-        # We pass the list-of-lists (or numpy array if bound correctly).
-        # Since our bindings take std::vector<std::vector<float>>,
-        # we convert numpy -> list. (Optimizable later)
+        # A. Build Index — use VegamDB's factory method
         t0 = time.time()
-        annoy.build(data.tolist(), n_trees, K_LEAF)
+        db.use_annoy_index(num_trees=n_trees, k_leaf=K_LEAF)
+        db.build_index()
         build_time = time.time() - t0
 
         # B. Run Search
         start_probe = time.time()
         annoy_results = []
         for i in range(N_QUERIES):
-            # search_k is ignored in our greedy impl, pass dummy 0
-            res = annoy.query(queries[i], K, 0)
-            annoy_results.append(res)
+            res = db.search(queries[i], K)
+            annoy_results.append(res.ids)
 
         # C. Metrics
         total_time = time.time() - start_probe

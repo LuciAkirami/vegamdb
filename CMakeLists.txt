@@ -44,9 +44,12 @@ else()
 endif()
 
 pybind11_add_module(myvector_db
-    src/VectorDB.cpp
+    src/VegamDB.cpp
     src/bindings.cpp
-    src/KMeans.cpp
-    src/Annoy.cpp
-    src/Utils.cpp
+    src/indexes/FlatIndex.cpp
+    src/indexes/IVFIndex.cpp
+    src/indexes/AnnoyIndex.cpp
+    src/indexes/KMeans.cpp
+    src/storage/VectorStore.cpp
+    src/utils/Math.cpp
 )

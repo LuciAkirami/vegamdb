@@ -10,7 +10,7 @@ def run_benchmark(n_vectors, dim=128):
     print(f"========================================")
 
     # 1. Initialize
-    db = myvector_db.SimpleVectorDB()
+    db = myvector_db.VegamDB()
 
     # 2. Data Generation (Not measured in DB time)
     print("Generating data (NumPy)...")

@@ -1,131 +1,110 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>   // Automatic conversion for std::vector, std::map, etc.
-#include <pybind11/numpy.h> // The header required to handle NumPy arrays
-#include "VectorDB.hpp"
-#include "KMeans.hpp"
-#include "Annoy.hpp"
+// src/bindings.cpp
 
-// Create a namespace alias "py" to save typing "pybind11::" everywhere
+#include "VegamDB.hpp"
+#include "indexes/AnnoyIndex.hpp"
+#include "indexes/FlatIndex.hpp"
+#include "indexes/IVFIndex.hpp"
+#include "indexes/IndexBase.hpp"
+#include "indexes/KMeans.hpp"
+#include <pybind11/cast.h>
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 namespace py = pybind11;
 
-// =================================================================================
-// THE MODULE ENTRY POINT
-// =================================================================================
-// PYBIND11_MODULE is a macro that creates the "init" function for Python.
-// 1. "myvector_db": This MUST match the library name in CMakeLists.txt (and the .so filename).
-// 2. "m": The variable representing the module instance.
-// =================================================================================
-PYBIND11_MODULE(myvector_db, m)
-{
+PYBIND11_MODULE(myvector_db, m) {
 
-    // Module Documentation (appears in help(myvector_db))
-    m.doc() = "A high-performance Vector Database plugin written in C++";
+  m.doc() = "A high-performance Vector Database plugin written in C++";
 
-    // =============================================================================
-    // BINDING THE CLASS
-    // =============================================================================
-    // py::class_<T> creates a Python class wrapper around the C++ type T.
-    // Arguments:
-    // 1. m: The module to attach this class to.
-    // 2. "SimpleVectorDB": The name of the class in Python.
-    // =============================================================================
-    py::class_<SimpleVectorDB>(m, "SimpleVectorDB")
+  // ---- Return type ----
+  py::class_<SearchResults>(m, "SearchResults")
+      .def_readonly("ids", &SearchResults::ids)
+      .def_readonly("distances", &SearchResults::distances);
 
-        // -------------------------------------------------------------------------
-        // 1. The Constructor
-        // Maps Python's __init__() to C++'s SimpleVectorDB()
-        // -------------------------------------------------------------------------
-        .def(py::init<>())
+  // ---- SearchParams hierarchy ----
+  py::class_<SearchParams>(m, "SearchParams");
 
-        // -------------------------------------------------------------------------
-        // 2. Standard Methods
-        // Maps Python method names to C++ member function addresses.
-        // Syntax: .def("python_name", &Class::cpp_function_address)
-        // -------------------------------------------------------------------------
-        .def("add_vector", &SimpleVectorDB::add_vector)
-        .def("get_size", &SimpleVectorDB::get_size)
+  py::class_<IVFSearchParams, SearchParams>(m, "IVFSearchParams")
+      .def(py::init<>())
+      .def_readwrite("n_probe", &IVFSearchParams::n_probe);
 
-        // -------------------------------------------------------------------------
-        // 3. NumPy Integration (The "Adapter")
-        // We cannot point to a standard C++ function here because C++ functions
-        // don't speak "NumPy". We create a Lambda function to translate.
-        // -------------------------------------------------------------------------
-        .def("add_vector_numpy",
-             [](SimpleVectorDB &self, py::array_t<float> input_array)
-             {
-                 // A. Request the "Buffer Info" struct from the Python object.
-                 // This contains the raw pointer (ptr), size, and dimensions.
-                 py::buffer_info buf = input_array.request();
+  py::class_<AnnoyIndexParams, SearchParams>(m, "AnnoyIndexParams")
+      .def(py::init<>())
+      .def_readwrite("search_k_nodes", &AnnoyIndexParams::search_k_nodes);
 
-                 // B. Input Validation
-                 if (buf.ndim != 1)
-                 {
-                     throw std::runtime_error("Number of dimensions must be 1");
-                 }
+  // ---- Index hierarchy ----
+  py::class_<IndexBase>(m, "IndexBase");
 
-                 // C. Pointer Conversion
-                 // buf.ptr is void* (blind). We cast it to float* so we can read it.
-                 float *data_ptr = static_cast<float *>(buf.ptr);
+  py::class_<FlatIndex, IndexBase>(m, "FlatIndex").def(py::init<>());
 
-                 // D. Size Extraction
-                 size_t size = buf.size;
+  py::class_<IVFIndex, IndexBase>(m, "IVFIndex")
+      .def(py::init<int, int, int, int>(), py::arg("n_clusters"),
+           py::arg("dimension"), py::arg("max_iters") = 50,
+           py::arg("n_probe") = 1);
 
-                 // E. Execution
-                 // Call the raw C++ method using the extracted pointer and size.
-                 self.add_vector_from_pointer(data_ptr, size);
-             })
-        // -------------------------------------------------------------------------
-        // 4. Search Algorithm
-        // Exposes the Brute Force K-Nearest Neighbors search.
-        // Arguments: (query_vector, k)
-        // Returns: List of top K indexes
-        // -------------------------------------------------------------------------
-        .def("search", &SimpleVectorDB::search)
+  py::class_<AnnoyIndex, IndexBase>(m, "AnnoyIndex")
+      .def(py::init<int, int, int, int>(), py::arg("dimension"),
+           py::arg("num_trees"), py::arg("k_leaf"),
+           py::arg("search_k_nodes") = 1);
 
-        // -------------------------------------------------------------------------
-        // 5. Persistence (File I/O)
-        // Exposes save/load functionality to write binary files to disk.
-        // Arguments: (filename_string)
-        // -------------------------------------------------------------------------
-        .def("save", &SimpleVectorDB::save)
-        .def("load", &SimpleVectorDB::load)
+  // ---- VegamDB (the orchestrator) ----
+  py::class_<VegamDB>(m, "VegamDB")
+      .def(py::init<>())
+      .def("dimension", &VegamDB::dimension)
+      .def("add_vector", &VegamDB::add_vector)
 
-        // -------------------------------------------------------------------------
-        // 6. Index Training
-        // Runs K-Means to build the Inverted File Index.
-        // Python usage: db.build_index(num_clusters=100, max_iters=10)
-        // -------------------------------------------------------------------------
-        .def("build_index", &SimpleVectorDB::build_ivf_index)
+      .def("add_vector_numpy",
+           [](VegamDB &self, py::array_t<float> input_array) {
+             py::buffer_info buf = input_array.request();
+             if (buf.ndim != 1) {
+               throw std::runtime_error("Number of dimensions must be 1");
+             }
+             float *data_ptr = static_cast<float *>(buf.ptr);
+             size_t size = buf.size;
+             self.add_vector_np(data_ptr, size);
+           })
 
-        // -------------------------------------------------------------------------
-        // 7. IVF Search
-        // Performs approximate nearest neighbor search using the index.
-        // Python usage: db.search_ivf(query_vector, k=5, nprobe=3)
-        // Note: 'nprobe' determines how many buckets to inspect.
-        // -------------------------------------------------------------------------
-        .def("search_ivf", &SimpleVectorDB::search_ivf);
+      .def("size", &VegamDB::size)
 
-    // =============================================================================
-    // K-MEANS CLUSTERING BINDINGS
-    // =============================================================================
+      //   .def("set_index", &VegamDB::set_index)
+      // Factory lambdas: pybind11 v2.11.1 can't directly bind functions taking
+      // unique_ptr<AbstractBase> as a parameter. These lambdas construct the
+      // index in C++ and call set_index() internally, avoiding the ownership
+      // transfer issue.
+      .def("use_flat_index",
+           [](VegamDB &self) { self.set_index(std::make_unique<FlatIndex>()); })
 
-    // 1. Bind KMeansIndex (The Result Struct)
-    // This is a simple data structure returned by the training function.
-    // We use .def_readonly so Python can read the results but not accidentally modify them.
-    py::class_<KMeansIndex>(m, "KMeansIndex")
-        .def_readonly("centroids", &KMeansIndex::centroids) // List of cluster centers
-        .def_readonly("buckets", &KMeansIndex::buckets);    // List of which vector IDs belong to which cluster
+      .def(
+          "use_ivf_index",
+          [](VegamDB &self, int n_clusters, int max_iters, int n_probe) {
+            self.set_index(std::make_unique<IVFIndex>(
+                n_clusters, self.dimension(), max_iters, n_probe));
+          },
+          py::arg("n_clusters"), py::arg("max_iters") = 50,
+          py::arg("n_probe") = 1)
 
-    // 2. Bind KMeans (The Trainer Class)
-    // This class handles the actual algorithmic training.
-    py::class_<KMeans>(m, "KMeans")
-        // Constructor: KMeans(k, max_iters, dimension)
-        .def(py::init<int, int, int>())
-        // The main method: Takes data, returns the KMeansIndex
-        .def("train", &KMeans::train);
-    // 3. Bind AnnoyIndex
-    py::class_<AnnoyIndex>(m, "AnnoyIndex")
-        .def(py::init<int>()) // Constructor takes 'dimension'
-        .def("build", &AnnoyIndex::build)
-        .def("query", &AnnoyIndex::query);
+      .def(
+          "use_annoy_index",
+          [](VegamDB &self, int num_trees, int k_leaf, int search_k_nodes) {
+            self.set_index(std::make_unique<AnnoyIndex>(
+                self.dimension(), num_trees, k_leaf, search_k_nodes));
+          },
+          py::arg("num_trees"), py::arg("k_leaf"),
+          py::arg("search_k_nodes") = 1)
+
+      .def("build_index", &VegamDB::build_index)
+      .def("search", &VegamDB::search, py::arg("query"), py::arg("k"),
+           py::arg("params") = nullptr)
+      .def("save", &VegamDB::save)
+      .def("load", &VegamDB::load);
+
+  // ---- KMeans (standalone utility) ----
+  py::class_<KMeansIndex>(m, "KMeansIndex")
+      .def_readonly("centroids", &KMeansIndex::centroids)
+      .def_readonly("buckets", &KMeansIndex::buckets);
+
+  py::class_<KMeans>(m, "KMeans")
+      .def(py::init<int, int, int>())
+      .def("train", &KMeans::train);
 }

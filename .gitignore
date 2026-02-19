@@ -5,6 +5,9 @@ __pycache__/
 .cache/
 *.so
 .venv
+.clangd
+artifacts/
+docs_internal/
 
 # Ignore binary data files
 *.bin

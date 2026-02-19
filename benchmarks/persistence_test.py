@@ -1,91 +1,161 @@
 import numpy as np
 import myvector_db
-import time
 import os
+import time
 
 
-def test_persistence():
-    filename = "test_ivf_index.bin"
+def test_flat_persistence():
+    """Test save/load with FlatIndex (default, no explicit index set)."""
+    filename = "test_flat.bin"
+    N = 1000
+    DIM = 64
+    K = 5
+
+    print("=== FLAT INDEX PERSISTENCE ===")
+
+    data = np.random.random((N, DIM)).astype(np.float32)
+    query = data[42]  # Use a known vector as query
+
+    # --- Save ---
+    db = myvector_db.VegamDB()
+    for i in range(N):
+        db.add_vector_numpy(data[i])
+
+    results_before = db.search(query, K)
+    print(f"  Results before save: {results_before.ids[:5]}")
+
+    t0 = time.time()
+    db.save(filename)
+    print(f"  Save time: {time.time() - t0:.4f}s")
+    del db
+
+    # --- Load ---
+    db2 = myvector_db.VegamDB()
+    t0 = time.time()
+    db2.load(filename)
+    print(f"  Load time: {time.time() - t0:.4f}s")
+
+    assert db2.size() == N, f"FAIL: Size mismatch {db2.size()} != {N}"
+    print(f"  Size after load: {db2.size()}")
+
+    results_after = db2.search(query, K)
+    print(f"  Results after load:  {results_after.ids[:5]}")
+
+    assert results_before.ids == results_after.ids, "FAIL: Results differ!"
+    print("  Results match")
+
+    os.remove(filename)
+    print("  PASSED\n")
+
+
+def test_ivf_persistence():
+    """Test save/load with IVFIndex."""
+    filename = "test_ivf.bin"
     N = 10000
     DIM = 128
-    CLUSTERS = 50
-    QUERY_K = 10
+    K = 10
     NPROBE = 5
 
-    print("--- 1. SETUP & TRAINING ---")
-    # Generate random data
-    print(f"Generating {N} vectors...")
+    print("=== IVF INDEX PERSISTENCE ===")
+
     data = np.random.random((N, DIM)).astype(np.float32)
-    query = np.random.random((DIM)).astype(np.float32)
+    query = np.random.random(DIM).astype(np.float32)
 
-    # Init DB 1
-    db_orig = myvector_db.SimpleVectorDB()
+    # --- Build & Save ---
+    db = myvector_db.VegamDB()
     for i in range(N):
-        db_orig.add_vector_numpy(data[i])
+        db.add_vector_numpy(data[i])
 
-    # Build Index
-    print("Building Index...")
-    db_orig.build_index(CLUSTERS, 10)
+    db.use_ivf_index(n_clusters=50, max_iters=10)
+    db.build_index()
 
-    # Run a Search BEFORE saving to establish a baseline
-    print("Running reference search on original DB...")
-    results_orig = db_orig.search_ivf(query, QUERY_K, NPROBE)
-    print(f"Original Results (First 5): {results_orig[:5]}")
+    params = myvector_db.IVFSearchParams()
+    params.n_probe = NPROBE
+    results_before = db.search(query, K, params)
+    print(f"  Results before save: {results_before.ids[:5]}")
 
-    # Save
-    print(f"Saving to {filename}...")
-    db_orig.save(filename)
+    t0 = time.time()
+    db.save(filename)
+    save_time = time.time() - t0
+    print(f"  Save time: {save_time:.4f}s")
+    del db
 
-    # Delete DB 1 object to ensure we aren't accidentally reading from memory
-    del db_orig
+    # --- Load ---
+    db2 = myvector_db.VegamDB()
+    t0 = time.time()
+    db2.load(filename)
+    print(f"  Load time: {time.time() - t0:.4f}s")
 
-    print("\n--- 2. LOADING & VERIFICATION ---")
-    db_loaded = myvector_db.SimpleVectorDB()
-    db_loaded.load(filename)
+    assert db2.size() == N, f"FAIL: Size mismatch {db2.size()} != {N}"
+    print(f"  Size after load: {db2.size()}")
 
-    # TEST 1: Size Verification
-    size = db_loaded.get_size()
-    print(f"Loaded DB Size: {size}")
-    if size != N:
-        print("FAILURE: Size mismatch.")
-        return
-    else:
-        print("SUCCESS: Size matches.")
+    params2 = myvector_db.IVFSearchParams()
+    params2.n_probe = NPROBE
+    results_after = db2.search(query, K, params2)
+    print(f"  Results after load:  {results_after.ids[:5]}")
 
-    # TEST 2: Data Integrity (Spot Check)
-    # We grab a specific vector from the source data (e.g., index 5000)
-    # and verify it exists at index 5000 in the loaded DB.
-    # We use Brute Force search with K=1 to find the exact match (distance should be 0)
-    check_idx = 5000
-    check_vec = data[check_idx]
-    print(f"Verifying data integrity for vector index {check_idx}...")
+    assert results_before.ids == results_after.ids, "FAIL: Results differ!"
+    print("  Results match")
 
-    # Search for the vector itself
-    search_res = db_loaded.search(check_vec, 1)
-    found_idx = search_res[0]
+    # Verify data integrity: search for a known vector
+    check_vec = data[5000]
+    spot_check = db2.search(check_vec, 1)
+    assert spot_check.ids[0] == 5000, f"FAIL: Expected 5000, got {spot_check.ids[0]}"
+    print("  Data integrity")
 
-    if found_idx == check_idx:
-        print("SUCCESS: Retrieved exact vector from loaded data (Data Integrity OK).")
-    else:
-        print(f"FAILURE: Expected index {check_idx}, got {found_idx}")
+    os.remove(filename)
+    print("  PASSED\n")
 
-    # TEST 3: IVF Search Consistency
-    # Does the index structure work exactly the same?
-    print("Running search on loaded DB with same query...")
-    results_loaded = db_loaded.search_ivf(query, QUERY_K, NPROBE)
-    print(f"Loaded Results (First 5):   {results_loaded[:5]}")
 
-    if results_orig == results_loaded:
-        print("SUCCESS: Search results are identical before and after load.")
-    else:
-        print("FAILURE: Search results differ.")
-        print(f"Orig:   {results_orig}")
-        print(f"Loaded: {results_loaded}")
+def test_annoy_persistence():
+    """Test save/load with AnnoyIndex."""
+    filename = "test_annoy.bin"
+    N = 10000
+    DIM = 64
+    K = 10
 
-    # Cleanup
-    if os.path.exists(filename):
-        os.remove(filename)
+    print("=== ANNOY INDEX PERSISTENCE ===")
+
+    data = np.random.random((N, DIM)).astype(np.float32)
+    query = np.random.random(DIM).astype(np.float32)
+
+    # --- Build & Save ---
+    db = myvector_db.VegamDB()
+    for i in range(N):
+        db.add_vector_numpy(data[i])
+
+    db.use_annoy_index(num_trees=10, k_leaf=50)
+    db.build_index()
+
+    results_before = db.search(query, K)
+    print(f"  Results before save: {results_before.ids[:5]}")
+
+    t0 = time.time()
+    db.save(filename)
+    print(f"  Save time: {time.time() - t0:.4f}s")
+    del db
+
+    # --- Load ---
+    db2 = myvector_db.VegamDB()
+    t0 = time.time()
+    db2.load(filename)
+    print(f"  Load time: {time.time() - t0:.4f}s")
+
+    assert db2.size() == N, f"FAIL: Size mismatch {db2.size()} != {N}"
+    print(f"  Size after load: {db2.size()}")
+
+    results_after = db2.search(query, K)
+    print(f"  Results after load:  {results_after.ids[:5]}")
+
+    assert results_before.ids == results_after.ids, "FAIL: Results differ!"
+    print("  Results match")
+
+    os.remove(filename)
+    print("  PASSED\n")
 
 
 if __name__ == "__main__":
-    test_persistence()
+    test_flat_persistence()
+    test_ivf_persistence()
+    test_annoy_persistence()
+    print("ALL PERSISTENCE TESTS PASSED!")

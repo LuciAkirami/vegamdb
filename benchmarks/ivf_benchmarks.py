@@ -96,7 +96,8 @@ def benchmark():
     # Queries should also come from the same distribution to mimic real users
     queries = generate_clustered_data(100, DIM, n_clusters_real=10)
 
-    db = myvector_db.SimpleVectorDB()
+    db = myvector_db.VegamDB()
+    # db.set_dimension(128)
     print("Ingesting data into C++ DB...")
     for i in range(N_VECTORS):
         db.add_vector_numpy(data[i])
@@ -112,7 +113,7 @@ def benchmark():
     for i in range(N_QUERIES):
         # search() is the brute force O(N) method
         res = db.search(queries[i], K)
-        ground_truth_results.append(res)
+        ground_truth_results.append(res.ids)
 
     time_flat = time.time() - start_flat
     avg_flat_ms = (time_flat / N_QUERIES) * 1000
@@ -124,7 +125,8 @@ def benchmark():
     # ---------------------------------------------------------
     print(f"\nTraining IVF Index ({N_CLUSTERS} clusters)...")
     start_train = time.time()
-    db.build_index(N_CLUSTERS, 20)  # 20 iterations
+    db.use_ivf_index(n_clusters=100, max_iters=20)
+    db.build_index()
     print(f"Training Time: {time.time() - start_train:.4f}s")
 
     # ---------------------------------------------------------
@@ -142,8 +144,10 @@ def benchmark():
 
         # Run all queries with this nprobe setting
         for i in range(N_QUERIES):
-            res = db.search_ivf(queries[i], K, nprobe)
-            ivf_results.append(res)
+            params = myvector_db.IVFSearchParams()
+            params.n_probe = nprobe
+            res = db.search(queries[i], K, params)
+            ivf_results.append(res.ids)
 
         # Metrics
         total_time = time.time() - start_probe
