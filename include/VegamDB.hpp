@@ -16,7 +16,7 @@ public:
 
   // Data
   void add_vector(const std::vector<float> &vec);
-  void add_vector_np(const float *arr, size_t size);
+  void add_vector_np(const float *arr, size_t n_vectors, size_t dim);
   int size() const;
   int dimension() const;
 

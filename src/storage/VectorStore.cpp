@@ -1,6 +1,7 @@
 // src/storage/VectorStore.cpp
 
 #include "storage/VectorStore.hpp"
+#include <cstddef>
 #include <fstream>
 #include <vector>
 
@@ -12,12 +13,18 @@ void VectorStore::add(const std::vector<float> &vec) {
   this->data_.push_back(vec);
 }
 
-void VectorStore::add_vector_from_pointer(const float *arr, size_t size) {
-  std::vector<float> temp(arr, arr + size);
+void VectorStore::add_vector_from_pointer(const float *arr, size_t n_vectors,
+                                          size_t dim) {
+
   if (data_.empty()) {
-    this->dimension_ = size;
+    this->dimension_ = dim;
   }
-  this->data_.push_back(temp);
+
+  for (int i = 0; i < n_vectors; i++) {
+    std::vector<float> temp(arr + i * dim, arr + i * dim + dim);
+
+    this->data_.push_back(temp);
+  }
 }
 
 const std::vector<float> &VectorStore::get(int idx) const {

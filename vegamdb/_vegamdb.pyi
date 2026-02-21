@@ -3,7 +3,7 @@
 # Type stubs for the compiled C++ extension module.
 # Provides IDE autocomplete and type checking support.
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy
 
@@ -114,12 +114,17 @@ class VegamDB:
         """Return the dimensionality of stored vectors (0 if empty)."""
         ...
 
-    def add_vector(self, vec: List[float]) -> None:
-        """Add a single vector as a Python list of floats."""
+    def add_vector(self, vec: Union[List[float], numpy.ndarray]) -> None:
+        """Add a single vector as a Python list of floats or NumPy array."""
         ...
 
     def add_vector_numpy(self, input_array: numpy.ndarray) -> None:
-        """Add a single vector from a 1D NumPy float32 array (zero-copy)."""
+        """Add vectors from a NumPy float32 array (zero-copy).
+
+        Args:
+            input_array: 1D array of shape (dim,) for a single vector,
+                or 2D array of shape (n_vectors, dim) for batch insertion.
+        """
         ...
 
     def size(self) -> int:
@@ -160,7 +165,7 @@ class VegamDB:
 
     def search(
         self,
-        query: List[float],
+        query: Union[List[float], numpy.ndarray],
         k: int,
         params: Optional[SearchParams] = None,
     ) -> SearchResults:

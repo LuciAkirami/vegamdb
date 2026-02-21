@@ -6,6 +6,7 @@
 #include "indexes/IVFIndex.hpp"
 #include "indexes/IndexBase.hpp"
 #include "indexes/KMeans.hpp"
+#include <cstddef>
 #include <pybind11/cast.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -107,15 +108,22 @@ Example:
           "add_vector_numpy",
           [](VegamDB &self, py::array_t<float> input_array) {
             py::buffer_info buf = input_array.request();
-            if (buf.ndim != 1) {
-              throw std::runtime_error("Number of dimensions must be 1");
+            if (buf.ndim == 1) {
+              float *data_ptr = static_cast<float *>(buf.ptr);
+              size_t dim = buf.size;
+              self.add_vector_np(data_ptr, 1, dim);
+            } else if (buf.ndim == 2) {
+              float *data_ptr = static_cast<float *>(buf.ptr);
+              size_t n_vectors = buf.shape[0];
+              size_t dim = buf.shape[1];
+              self.add_vector_np(data_ptr, n_vectors, dim);
+            } else {
+              throw std::runtime_error("Number of dimensions must be 1/2D");
             }
-            float *data_ptr = static_cast<float *>(buf.ptr);
-            size_t size = buf.size;
-            self.add_vector_np(data_ptr, size);
           },
           py::arg("input_array"),
-          "Add a single vector from a 1D NumPy float32 array (zero-copy).")
+          "Add a single vector from a 1D NumPy float32 array or a 2D Numpy "
+          "Array(zero-copy).")
 
       .def("size", &VegamDB::size,
            "Return the number of vectors stored in the database.")

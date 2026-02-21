@@ -46,10 +46,9 @@ from vegamdb import VegamDB
 # Create a database
 db = VegamDB()
 
-# Add vectors
+# Add vectors (batch — pass a 2D NumPy array)
 data = np.random.random((10000, 128)).astype(np.float32)
-for vec in data:
-    db.add_vector_numpy(vec)
+db.add_vector_numpy(data)
 
 # Search (defaults to exact flat search)
 query = np.random.random(128).astype(np.float32)
@@ -149,7 +148,7 @@ The index type and its trained state are serialized automatically. After loading
 | ---------------------- | ----------------------------------------------------------------- |
 | `VegamDB()`            | Create a new empty database instance                              |
 | `add_vector(vec)`      | Add a vector from a Python list of floats                         |
-| `add_vector_numpy(arr)`| Add a vector from a 1D NumPy float32 array (zero-copy)            |
+| `add_vector_numpy(arr)`| Add vectors from a 1D `(dim,)` or 2D `(n, dim)` NumPy array      |
 | `size()`               | Return the number of stored vectors                               |
 | `dimension()`          | Return the dimensionality of stored vectors (0 if empty)          |
 | `use_flat_index()`     | Set index to brute-force flat search                              |

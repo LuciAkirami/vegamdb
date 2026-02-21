@@ -11,3 +11,6 @@ docs_internal/
 
 # Ignore binary data files
 *.bin
+
+# Ignore dist
+dist/

@@ -13,7 +13,7 @@ private:
 
 public:
   void add(const std::vector<float> &vec);
-  void add_vector_from_pointer(const float *arr, size_t size);
+  void add_vector_from_pointer(const float *arr, size_t n_vectors, size_t dim);
 
   const std::vector<float> &get(int idx) const;
   const std::vector<std::vector<float>> &data() const;

@@ -13,8 +13,8 @@ void VegamDB::add_vector(const std::vector<float> &vec) {
   this->store_.add(vec);
 }
 
-void VegamDB::add_vector_np(const float *arr, size_t size) {
-  this->store_.add_vector_from_pointer(arr, size);
+void VegamDB::add_vector_np(const float *arr, size_t n_vectors, size_t dim) {
+  this->store_.add_vector_from_pointer(arr, n_vectors, dim);
 }
 
 int VegamDB::size() const { return this->store_.size(); }
