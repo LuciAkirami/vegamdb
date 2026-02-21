@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <numeric>
 #include <queue>
 #include <random>
 #include <utility>
