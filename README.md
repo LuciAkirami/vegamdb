@@ -13,6 +13,17 @@ A high-performance vector database written in C++ with Python bindings. VegamDB 
 
 ## Installation
 
+### From PyPI
+
+```bash
+pip install vegamdb
+```
+
+> **Note:** Since VegamDB ships as a source distribution, `pip install` will compile the C++ code on your machine. You'll need:
+> - A **C++17 compiler** (GCC 7+, Clang 5+, MSVC 2017+)
+> - **CMake** >= 3.15
+> - **Python** >= 3.8
+
 ### From Source
 
 ```bash
@@ -20,13 +31,6 @@ git clone https://github.com/LuciAkirami/vegamdb.git
 cd vegamdb
 pip install .
 ```
-
-### Requirements
-
-- Python >= 3.8
-- CMake >= 3.15
-- A C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
-- NumPy
 
 ### Development Install
 
