@@ -104,19 +104,33 @@ results = db.search(query, k=10, params=params)
 
 ### Annoy Index (Approximate Nearest Neighbors)
 
-Builds a forest of random projection trees. Each tree recursively splits the vector space with random hyperplanes. At query time, multiple trees are traversed to collect candidate neighbors.
+Builds a forest of random projection trees. Each tree recursively splits the vector space with random hyperplanes. Supports two search strategies: a **priority queue** approach (Spotify-style, default) that smartly explores the most promising branches, and a **greedy** approach that traverses one leaf per tree.
 
 ```python
+# Priority queue search (default)
 db.use_annoy_index(num_trees=10, k_leaf=50)
 db.build_index()
-
 results = db.search(query, k=10)
+
+# Greedy search (faster, slightly less accurate)
+db.use_annoy_index(num_trees=10, k_leaf=50, use_priority_queue=False)
+db.build_index()
+results = db.search(query, k=10)
+
+# Override search params per-query
+from vegamdb import AnnoyIndexParams
+params = AnnoyIndexParams()
+params.search_k = 500
+params.use_priority_queue = True
+results = db.search(query, k=10, params=params)
 ```
 
-| Parameter        | Description                                    | Default |
-| ---------------- | ---------------------------------------------- | ------- |
-| `num_trees`      | Number of random projection trees              | --      |
-| `k_leaf`         | Maximum points per leaf node                   | --      |
+| Parameter             | Description                                              | Default             |
+| --------------------- | -------------------------------------------------------- | ------------------- |
+| `num_trees`           | Number of random projection trees                        | --                  |
+| `k_leaf`              | Maximum points per leaf node                             | --                  |
+| `search_k`            | Candidate budget for search                              | `num_trees * k_leaf`|
+| `use_priority_queue`  | `True` for priority queue, `False` for greedy traversal  | `True`              |
 
 ### Choosing an Index
 
@@ -175,6 +189,10 @@ The index type and its trained state are serialized automatically. After loading
 **IVFSearchParams** -- Override the default probe count for IVF search:
 - `n_probe` (int): Number of clusters to search. Higher values improve recall at the cost of latency.
 
+**AnnoyIndexParams** -- Override Annoy search behavior per-query:
+- `search_k` (int): Number of candidate vectors to collect. Higher values improve recall.
+- `use_priority_queue` (bool): `True` for priority queue search, `False` for greedy.
+
 ## Architecture
 
 ```
@@ -213,6 +231,8 @@ vegamdb/
 │   ├── __init__.py           # Public API re-exports
 │   └── _vegamdb.pyi          # Type stubs for IDE support
 ├── benchmarks/               # Performance benchmarks
+├── tests/                    # pytest test suite
+├── .github/workflows/        # CI/CD (GitHub Actions)
 ├── CMakeLists.txt            # C++ build configuration
 └── pyproject.toml            # Python packaging (scikit-build-core)
 ```
