@@ -37,10 +37,19 @@ include_directories(include)
 
 # 1. Turn on Maximum Optimization (-O3)
 # 2. Tune for the architecture of YOUR specific computer (-march=native)
+# 3. While building for distribution, this is OFF as MacOS clang errors out
+# 4. march=native tells compiler to use instructions on GitHub Runner CPU
+
+# Allow overriding optimizations for distribution
+option(BUILD_FOR_DISTRIBUTION "Set to ON when building wheels for others" OFF)
+
 if(MSVC)
     add_compile_options(/O2 /arch:AVX2)
 else()
-    add_compile_options(-O3 -march=native -ffast-math)
+    add_compile_options(-O3 -ffast-math)
+    if(NOT BUILD_FOR_DISTRIBUTION AND NOT APPLE)
+        add_compile_options(-march=native)
+    endif()
 endif()
 
 pybind11_add_module(_vegamdb
