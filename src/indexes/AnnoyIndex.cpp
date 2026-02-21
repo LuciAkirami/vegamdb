@@ -257,11 +257,13 @@ SearchResults AnnoyIndex::search(const std::vector<std::vector<float>> &data,
 
 bool AnnoyIndex::is_trained() const { return !roots.empty(); }
 
-// ----- save() -----
 void AnnoyIndex::save(std::ofstream &out) const {
   // Write metadata
+  out.write(reinterpret_cast<const char *>(&use_priority_queue), sizeof(bool));
   out.write(reinterpret_cast<const char *>(&num_trees), sizeof(int));
   out.write(reinterpret_cast<const char *>(&dimension), sizeof(int));
+  out.write(reinterpret_cast<const char *>(&k_leaf), sizeof(int));
+  out.write(reinterpret_cast<const char *>(&search_k), sizeof(int));
 
   // Write each tree
   for (int i = 0; i < num_trees; i++) {
@@ -293,10 +295,12 @@ void AnnoyIndex::save_node(std::ofstream &out, AnnoyNode *node) const {
   }
 }
 
-// ----- load() -----
 void AnnoyIndex::load(std::ifstream &in) {
+  in.read(reinterpret_cast<char *>(&use_priority_queue), sizeof(bool));
   in.read(reinterpret_cast<char *>(&num_trees), sizeof(int));
   in.read(reinterpret_cast<char *>(&dimension), sizeof(int));
+  in.read(reinterpret_cast<char *>(&k_leaf), sizeof(int));
+  in.read(reinterpret_cast<char *>(&search_k), sizeof(int));
 
   roots.resize(num_trees);
   for (int i = 0; i < num_trees; i++) {

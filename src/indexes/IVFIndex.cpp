@@ -88,6 +88,8 @@ void IVFIndex::save(std::ofstream &out) const {
   if (!is_trained())
     return;
 
+  out.write(reinterpret_cast<const char *>(&n_probe), sizeof(int));
+
   int num_centroids = centroids.size();
   out.write(reinterpret_cast<const char *>(&num_centroids), sizeof(int));
   out.write(reinterpret_cast<const char *>(&dimension), sizeof(int));
@@ -107,6 +109,7 @@ void IVFIndex::save(std::ofstream &out) const {
 }
 
 void IVFIndex::load(std::ifstream &in) {
+  in.read(reinterpret_cast<char *>(&n_probe), sizeof(int));
   in.read(reinterpret_cast<char *>(&n_clusters), sizeof(int));
   in.read(reinterpret_cast<char *>(&dimension), sizeof(int));
 

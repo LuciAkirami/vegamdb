@@ -24,6 +24,9 @@ authors = [
 ]
 dependencies = ["numpy"]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 # ──────────────────────────────────────────────
 # Section 3: scikit-build config
 # Tells scikit-build to include the "vegamdb/" Python
