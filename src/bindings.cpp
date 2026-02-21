@@ -51,25 +51,28 @@ Example:
       .def_readwrite("n_probe", &IVFSearchParams::n_probe,
                      "Number of clusters to probe during search (default: 1).");
 
-  // TODO: Uncomment once search_k_nodes runtime override is implemented
-  // in AnnoyIndex::search()
-  //
-  // py::class_<AnnoyIndexParams, SearchParams>(
-  //     m, "AnnoyIndexParams",
-  //     R"(Search parameters for Annoy index.
-  //
-  // Attributes:
-  //     search_k_nodes (int): Number of leaf nodes to inspect during search.
-  //         Higher values improve recall at the cost of speed.
-  //
-  // Example:
-  //     params = AnnoyIndexParams()
-  //     params.search_k_nodes = 50
-  //     results = db.search(query, k=5, params=params)
-  // )")
-  //     .def(py::init<>())
-  //     .def_readwrite("search_k_nodes", &AnnoyIndexParams::search_k_nodes,
-  //                    "Number of leaf nodes to inspect during search.");
+  py::class_<AnnoyIndexParams, SearchParams>(
+      m, "AnnoyIndexParams",
+      R"(Search parameters for Annoy index.
+  
+  Attributes:
+      search_k (int): Number of candidate vectors to collect during search.
+          Higher values improve recall at the cost of speed.
+      use_priority_queue (bool): If True, use Spotify-style priority queue
+          search. If False, use greedy one-leaf-per-tree search. Default: True.
+  
+  Example:
+      params = AnnoyIndexParams()
+      params.search_k = 500
+      params.use_priority_queue = False  # switch to greedy
+      results = db.search(query, k=5, params=params)
+  )")
+      .def(py::init<>())
+      .def_readwrite("search_k", &AnnoyIndexParams::search_k,
+                     "Number of candidate vectors to collect during search.")
+      .def_readwrite("use_priority_queue",
+                     &AnnoyIndexParams::use_priority_queue,
+                     "Use priority queue (True) or greedy (False) search.");
 
   // ---- Index hierarchy ----
   py::class_<IndexBase>(m, "IndexBase",
@@ -90,9 +93,9 @@ Example:
   py::class_<AnnoyIndex, IndexBase>(
       m, "AnnoyIndex",
       "Approximate Nearest Neighbors using random projection trees.")
-      .def(py::init<int, int, int, int>(), py::arg("dimension"),
-           py::arg("num_trees"), py::arg("k_leaf"),
-           py::arg("search_k_nodes") = 1);
+      .def(py::init<int, int, int, int, bool>(), py::arg("dimension"),
+           py::arg("num_trees"), py::arg("k_leaf"), py::arg("search_k") = -1,
+           py::arg("use_priority_queue") = true);
 
   // ---- VegamDB (the orchestrator) ----
   py::class_<VegamDB>(
@@ -156,18 +159,21 @@ Args:
 
       .def(
           "use_annoy_index",
-          [](VegamDB &self, int num_trees, int k_leaf, int search_k_nodes) {
+          [](VegamDB &self, int num_trees, int k_leaf, int search_k,
+             bool use_priority_queue) {
             self.set_index(std::make_unique<AnnoyIndex>(
-                self.dimension(), num_trees, k_leaf, search_k_nodes));
+                self.dimension(), num_trees, k_leaf, search_k,
+                use_priority_queue));
           },
-          py::arg("num_trees"), py::arg("k_leaf"),
-          py::arg("search_k_nodes") = 1,
+          py::arg("num_trees"), py::arg("k_leaf"), py::arg("search_k") = -1,
+          py::arg("use_priority_queue") = true,
           R"(Set the index to Annoy (Approximate Nearest Neighbors Oh Yeah).
 
 Args:
     num_trees: Number of random projection trees to build.
     k_leaf: Maximum number of points in each leaf node.
-    search_k_nodes: Number of leaf nodes to search at query time (default: 1).
+    search_k: Candidate budget for search (default: num_trees * k_leaf).
+    use_priority_queue: Use priority queue (True) or greedy (False) search.
 )")
 
       .def("build_index", &VegamDB::build_index,

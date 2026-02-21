@@ -4,15 +4,24 @@
 #include "indexes/IndexBase.hpp"
 #include "utils/Math.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
+#include <limits>
+#include <queue>
 #include <random>
 #include <utility>
 #include <vector>
 
-AnnoyIndex::AnnoyIndex(int dimension, int num_trees, int k_leaf,
-                       int search_k_nodes)
+AnnoyIndex::AnnoyIndex(int dimension, int num_trees, int k_leaf, int search_k,
+                       bool use_priority_queue)
     : dimension(dimension), num_trees(num_trees), k_leaf(k_leaf),
-      search_k_nodes(search_k_nodes) {};
+      use_priority_queue(use_priority_queue) {
+  if (search_k == -1) {
+    this->search_k = num_trees * k_leaf;
+  } else {
+    this->search_k = search_k;
+  }
+};
 
 AnnoyIndex::~AnnoyIndex() {
   for (auto *root : this->roots) {
@@ -159,32 +168,62 @@ SearchResults AnnoyIndex::search(const std::vector<std::vector<float>> &data,
     return results;
   }
 
-  int effective_search_k_nodes = this->search_k_nodes;
+  int effective_search_k = this->search_k;
+  bool effective_use_pq = this->use_priority_queue;
 
   if (params) {
     auto annoy_params = dynamic_cast<const AnnoyIndexParams *>(params);
-    effective_search_k_nodes = annoy_params->search_k_nodes;
+    effective_search_k = annoy_params->search_k;
+    effective_use_pq = annoy_params->use_priority_queue;
   }
-
-  int min_search_k_nodes = std::min(effective_search_k_nodes, this->num_trees);
 
   std::vector<int> candidates;
 
-  for (int i = 0; i < num_trees; i++) {
-    AnnoyNode *curr = roots[i];
+  if (effective_use_pq) {
+    // --- Priority queue approach (Spotify-style) ---
+    std::priority_queue<std::pair<float, AnnoyNode *>> pq;
 
-    while (!curr->is_leaf()) {
-      float margin = get_margin(curr->hyperplane, query);
-
-      if (margin >= 0.0) {
-        curr = curr->left;
-      } else {
-        curr = curr->right;
-      }
+    for (auto &root : this->roots) {
+      // Cannot use infinity as we have enabled -O3
+      pq.push({std::numeric_limits<float>::max(), root});
     }
 
-    candidates.insert(candidates.end(), curr->bucket.begin(),
-                      curr->bucket.end());
+    while ((candidates.size() < effective_search_k) && (!pq.empty())) {
+      float distance = pq.top().first;
+      AnnoyNode *node = pq.top().second;
+
+      pq.pop();
+
+      if (node->is_leaf()) {
+        candidates.insert(candidates.end(), node->bucket.begin(),
+                          node->bucket.end());
+
+        continue;
+      }
+
+      float margin = get_margin(node->hyperplane, query);
+
+      pq.push({std::min(distance, margin), node->left});
+      pq.push({std::min(distance, -1.0f * margin), node->right});
+    }
+  } else {
+    // --- Greedy approach (one leaf per tree) ---
+    for (int i = 0; i < num_trees; i++) {
+      AnnoyNode *curr = roots[i];
+
+      while (!curr->is_leaf()) {
+        float margin = get_margin(curr->hyperplane, query);
+
+        if (margin >= 0.0) {
+          curr = curr->left;
+        } else {
+          curr = curr->right;
+        }
+      }
+
+      candidates.insert(candidates.end(), curr->bucket.begin(),
+                        curr->bucket.end());
+    }
   }
 
   std::sort(candidates.begin(), candidates.end());

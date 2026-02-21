@@ -47,24 +47,28 @@ class IVFSearchParams(SearchParams):
     def __init__(self) -> None: ...
 
 
-# TODO: Uncomment once search_k_nodes runtime override is implemented
-# class AnnoyIndexParams(SearchParams):
-#     """Search parameters for Annoy index.
-#
-#     Attributes:
-#         search_k_nodes: Number of leaf nodes to inspect during search.
-#             Higher values improve recall at the cost of speed.
-#
-#     Example::
-#
-#         params = AnnoyIndexParams()
-#         params.search_k_nodes = 50
-#         results = db.search(query, k=5, params=params)
-#     """
-#
-#     search_k_nodes: int
-#     """Number of leaf nodes to inspect during search."""
-#     def __init__(self) -> None: ...
+class AnnoyIndexParams(SearchParams):
+    """Search parameters for Annoy index.
+
+    Attributes:
+        search_k: Number of candidate vectors to collect during search.
+            Higher values improve recall at the cost of speed.
+        use_priority_queue: If True, use priority queue search.
+            If False, use greedy one-leaf-per-tree search. Default: True.
+
+    Example::
+
+        params = AnnoyIndexParams()
+        params.search_k = 500
+        params.use_priority_queue = False
+        results = db.search(query, k=5, params=params)
+    """
+
+    search_k: int
+    """Number of candidate vectors to collect during search."""
+    use_priority_queue: bool
+    """Use priority queue (True) or greedy (False) search."""
+    def __init__(self) -> None: ...
 
 
 class IndexBase:
@@ -99,7 +103,8 @@ class AnnoyIndex(IndexBase):
         dimension: int,
         num_trees: int,
         k_leaf: int,
-        search_k_nodes: int = 1,
+        search_k: int = -1,
+        use_priority_queue: bool = True,
     ) -> None: ...
 
 

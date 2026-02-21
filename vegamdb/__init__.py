@@ -6,8 +6,9 @@ from vegamdb._vegamdb import (
     SearchResults,
     SearchParams,
     IVFSearchParams,
+    AnnoyIndexParams,
     KMeans,
     KMeansIndex,
 )
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"

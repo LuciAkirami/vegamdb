@@ -35,7 +35,8 @@ struct AnnoyNode {
 };
 
 struct AnnoyIndexParams : SearchParams {
-  int search_k_nodes;
+  int search_k;
+  bool use_priority_queue = true;
 };
 
 class AnnoyIndex : public IndexBase {
@@ -44,10 +45,12 @@ private:
   std::vector<AnnoyNode *> roots;
   int num_trees;
   int k_leaf;
-  int search_k_nodes = 1;
+  int search_k = num_trees * k_leaf;
+  bool use_priority_queue = true;
 
 public:
-  AnnoyIndex(int dimension, int num_trees, int k_leaf, int search_k_nodes = 1);
+  AnnoyIndex(int dimension, int num_trees, int k_leaf, int search_k = -1,
+             bool use_priority_queue = true);
   ~AnnoyIndex();
   virtual void build(const std::vector<std::vector<float>> &data) override;
   virtual SearchResults search(const std::vector<std::vector<float>> &data,
