@@ -1,0 +1,34 @@
+# ──────────────────────────────────────────────
+# Section 1: Build System
+# This tells pip WHAT tool to use to build your C++ code.
+# scikit-build-core is a modern pip-compatible wrapper around CMake.
+# ──────────────────────────────────────────────
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+# ──────────────────────────────────────────────
+# Section 2: Project Metadata
+# Standard Python package info — name, version, etc.
+# This is what shows up on PyPI if you ever publish.
+# ──────────────────────────────────────────────
+[project]
+name = "vegamdb"
+version = "0.1.0"
+description = "A high-performance vector database written in C++ with Python bindings"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Naredla Ajay Kumar Reddy"}
+]
+dependencies = ["numpy"]
+
+# ──────────────────────────────────────────────
+# Section 3: scikit-build config
+# Tells scikit-build to include the "vegamdb/" Python
+# package directory in the final installed wheel.
+# The compiled .so gets placed inside this directory.
+# ──────────────────────────────────────────────
+[tool.scikit-build]
+wheel.packages = ["vegamdb"]

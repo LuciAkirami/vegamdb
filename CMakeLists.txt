@@ -1,5 +1,5 @@
 # 1. Check the CMake version
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 # 2. Name the project
 project(VectorDBProject)
@@ -43,7 +43,7 @@ else()
     add_compile_options(-O3 -march=native -ffast-math)
 endif()
 
-pybind11_add_module(vegamdb
+pybind11_add_module(_vegamdb
     src/VegamDB.cpp
     src/bindings.cpp
     src/indexes/FlatIndex.cpp
@@ -53,3 +53,5 @@ pybind11_add_module(vegamdb
     src/storage/VectorStore.cpp
     src/utils/Math.cpp
 )
+
+install(TARGETS _vegamdb DESTINATION vegamdb)
